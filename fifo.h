@@ -1,5 +1,5 @@
 /*
- *  tinyQueue: an efficient lock-free queue on pipeline parallelism 
+ *  tinyQueue: an efficient lock-free queue for pipeline parallelism 
  *  on multi-core architectures.
  *
  *
