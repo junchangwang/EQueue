@@ -2,7 +2,6 @@
  *  tinyQueue: an efficient lock-free queue for pipeline parallelism 
  *  on multi-core architectures.
  *
- *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
@@ -20,13 +19,14 @@
  *
 */
 
-
 #include "fifo.h"
 #include <sched.h>
 
 #if defined(FIFO_DEBUG)
 #include <assert.h>
 #endif
+
+struct queue_t queues[MAX_CORE_NUM];
 
 inline uint64_t rdtsc_bare()
 {
@@ -62,12 +62,12 @@ inline uint64_t rdtsc_barrier(void)
 
 inline void wait_ticks(uint64_t ticks)
 {
-        uint64_t        current_time;
-        uint64_t        time = rdtsc_bare();
-        time += ticks;
-        do {
-                current_time = rdtsc_bare();
-        } while (current_time < time);
+	uint64_t        current_time;
+	uint64_t        time = rdtsc_bare();
+	time += ticks;
+	do {
+		current_time = rdtsc_bare();
+	} while (current_time < time);
 }
 
 static ELEMENT_TYPE ELEMENT_ZERO = 0x0UL;
@@ -76,145 +76,97 @@ static ELEMENT_TYPE ELEMENT_ZERO = 0x0UL;
 /********** Queue Functions **********************/
 /*************************************************/
 
-void queue_init(struct queue_t *q, uint64_t queue_size, uint64_t batch_size_p, uint64_t batch_size_c, uint64_t penalty)
+void queue_init(struct queue_t *q, uint64_t queue_size, uint64_t penalty)
 {
 	memset(q, 0, sizeof(struct queue_t));
 #if defined(TINYQUEUE)
 	q->info.queue_size = queue_size;
 #else
-    q->queue_size = queue_size;
-#endif
-#if defined(CONS_BATCH) || defined(PROD_BATCH)
-    q->batch_size_p = batch_size_p;
-    q->batch_size_c = batch_size_c;
-    q->batch_history_p = q->batch_history_c = 1;
+	q->queue_size = queue_size;
 #endif
 #if defined(TINYQUEUE)
-	q->traffic = 0;
+	q->traffic_full = 0;
+	q->traffic_empty = 0;
 #endif
-    q->penalty = penalty;
+	q->penalty = penalty;
 #if defined(TINYQUEUE)
 	printf("===== TinyQueue starts ======\n");
-    q->data = (ELEMENT_TYPE *) calloc (MAX_QUEUE_SIZE, sizeof(ELEMENT_TYPE));
+	q->data = (ELEMENT_TYPE *) calloc (MAX_QUEUE_SIZE, sizeof(ELEMENT_TYPE));
 #else
-    q->data = (ELEMENT_TYPE *) calloc (q->queue_size, sizeof(ELEMENT_TYPE));
+	q->data = (ELEMENT_TYPE *) calloc (q->queue_size, sizeof(ELEMENT_TYPE));
 #endif
 
-    if (q->data == NULL) {
-        printf("Error in allocating FIFO queue.\n");
-        exit(-1);
-    }
+	if (q->data == NULL) {
+		printf("Error in allocating FIFO queue.\n");
+		exit(-1);
+	}
 }
-
-#if defined(PROD_BATCH) || defined(CONS_BATCH)
-inline int leqthan(volatile ELEMENT_TYPE point, volatile ELEMENT_TYPE batch_point)
-{
-    return (point == batch_point);
-}
-#endif
 
 #if defined(TINYQUEUE)
-int enqueue(struct queue_t * q, ELEMENT_TYPE value)
-{
-    if ( q->data[q->info.head] ) {
-        return BUFFER_FULL;
-    }
 
-    uint32_t t = q->info.head;
-    q->info.head ++;
-    if ( q->info.head >= q->info.queue_size ) {
-		int resize_threshold = 30;
-		//printf("traffic value: %ld, resize threshhold: %d\n", 
-		//		q->traffic, resize_threshold);
-		if (q->traffic >= resize_threshold) {
-			q->info.queue_size = q->info.queue_size * 2;
-			q->traffic = 0;
-			printf("Double queue size to %d\n", q->info.queue_size);
+uint32_t MOD(uint32_t val, uint32_t inc, uint32_t mod)
+{
+	if ((val + inc) >= mod)
+		return val + inc - mod;
+	else
+		return val + inc;
+}
+
+int enqueue_batching_detect(struct queue_t * q )
+{
+	int batch_size = DEFAULT_BATCH_SIZE;
+	int batch_head = MOD(q->info.head, batch_size, q->info.queue_size);
+
+	while ( q->data[batch_head] ) {
+		wait_ticks(DEFAULT_PENALTY);
+		if ( batch_size > BATCH_SLICE ) {
+			batch_size = batch_size >> 1;
+			batch_head = MOD(q->info.head, batch_size, q->info.queue_size);
 		}
 		else
-			q->info.head = 0;
-    }
+			return BUFFER_FULL;
+	}
+	q->info.head = batch_head;
 
-    q->data[t] = value;
-
-    return SUCCESS;
+	return SUCCESS;
 }
-
-#elif defined(PROD_BATCH)
 
 int enqueue(struct queue_t * q, ELEMENT_TYPE value)
 {
-    uint32_t tmp_head;
-    unsigned long bt_old, bt = 1;
-
-    if( q->head == q->batch_head ) {
-        if ( q->data[q->batch_head] ) {
-            wait_ticks(q->penalty);
-            return BUFFER_FULL;
-        }
-
-        bt_old = bt = q->batch_history_p;
-        tmp_head = q->batch_head + bt;
-        if (tmp_head >= q->queue_size)
-           tmp_head -= q->queue_size;
-
-        if ( !q->data[tmp_head] ) {
-            // Incremental
-            while( !q->data[tmp_head] && (bt <= q->batch_size_p) ) {
-                bt_old = bt;
-                bt = bt << 1;
-                tmp_head = q->batch_head + bt;
-                if ( tmp_head >= q->queue_size )
-                    tmp_head -= q->queue_size;
-            }
-        }
-        else {
-           // Backtracking
-           while ( q->data[tmp_head] && (bt > 1) ) {
-                bt = bt >> 1;
-                tmp_head = q->batch_head + bt;
-                if (tmp_head >= q->queue_size)
-                    tmp_head -= q->queue_size;
-            }
-           bt_old = bt;
-        }
-
-        q->batch_history_p = bt_old;
-        tmp_head = q->batch_head + bt_old;
-        if (tmp_head >= q->queue_size)
-            tmp_head -= q->queue_size;
-        q->batch_head = tmp_head;
-    }
-
-    q->data[q->head] = value;
-    q->head ++;
-    if ( q->head >= q->queue_size ) {
-        q->head = 0;
-    }
-
-    return SUCCESS;
-}
-
+#if defined(BATCHING)
+	if ( q->local_head == q->info.head ) {
+		if (enqueue_batching_detect(q) != SUCCESS)
+			return BUFFER_FULL;
+	}
 #else
-
-int enqueue(struct queue_t * q, ELEMENT_TYPE value)
-{
-    if ( q->data[q->head] ) {
-        return BUFFER_FULL;
-    }
-
-    q->data[q->head] = value;
-    q->head ++;
-    if ( q->head >= q->queue_size ) {
-        q->head = 0;
-    }
-
-    return SUCCESS;
-}
-
+	if ( READ_ONCE(q->data[q->local_head]) ) {
+		return BUFFER_FULL;
+	}
 #endif
 
-#if defined(TINYQUEUE)
+	uint32_t t = q->local_head;
+	q->local_head ++;
+	if ( q->local_head >= q->info.queue_size ) {
+		long traffic_tmp = q->traffic_full - q->traffic_empty;
+		if (traffic_tmp >= ENLARGE_THRESHOLD) {
+			if ((q->info.queue_size << 1) > MAX_QUEUE_SIZE) {
+				q->local_head = 0;
+				printf("(FAILURE: Queue %ld) Enlarging queue size failed (reaching maximum queue size. Current value: %u)\n", (q - queues), q->info.queue_size);
+			}
+			else {
+				q->info.queue_size = q->info.queue_size << 1;
+				q->traffic_full = q->traffic_empty = 0;
+				printf("(SUCCESS: Qeueue %ld) Enlarge queue size to %d\n", (q - queues), q->info.queue_size); 
+			}
+		}
+		else
+			q->local_head = 0;
+	}
+
+	WRITE_ONCE(q->data[t], value);
+
+	return SUCCESS;
+}
 
 int dequeue(struct queue_t * q, ELEMENT_TYPE * value)
 {
@@ -222,103 +174,68 @@ int dequeue(struct queue_t * q, ELEMENT_TYPE * value)
 		return BUFFER_EMPTY;
 	}
 
-	uint32_t t = q->tail;
-	q->tail++;
-	if ( q->tail >= q->info.queue_size ) {
-		int count = 0;
-		int resize_threshold = -30;
-		struct info_t tmp;
-		struct info_t tmp2;
-		if (q->traffic <= resize_threshold) { 
-tag1:
-			tmp = tmp2 = q->info;
-			if (count >= 10)
-				goto tag2;
-			if (tmp.head < tmp.queue_size / 2) {
-				tmp2.queue_size /= 2;
-			}
-			else
-				goto tag2;
-
-			if (__sync_bool_compare_and_swap((uint64_t *)&q->info, *(uint64_t *)&tmp, *(uint64_t *)&tmp2)) {
-				q->traffic = 0;
-				printf("Half queue size to %d\n", q->info.queue_size);
-				goto tag2;
+	uint32_t t = READ_ONCE(q->tail);
+	WRITE_ONCE(q->tail, t + 1);
+	if ( (t+1) >= q->info.queue_size ) {
+		long traffic_tmp = q->traffic_empty - q->traffic_full;
+		if (traffic_tmp >= SHRINK_THRESHOLD) { 
+			struct info_t tmp;
+			struct info_t tmp2;
+			tmp2 = tmp = READ_ONCE(q->info);
+			if (tmp.queue_size <= MIN_QUEUE_SIZE) {
+				printf("(Queue %ld) Failed to shrink queue size (queue size too small : %u)\n", (q-queues), q->info.queue_size);
 			}
 			else {
-				printf("CAS failed in dequeue\n");
-				count ++;
-				goto tag1;
+				if (tmp.head < (tmp.queue_size >> 1)) {
+					tmp2.queue_size = tmp2.queue_size >> 1;
+					if (__sync_bool_compare_and_swap((uint64_t *)&(q->info), *(uint64_t *)&tmp, *(uint64_t *)&tmp2)) {
+						q->traffic_empty = q->traffic_full = 0;
+						printf("(SUCCESS: Queue %ld) Shrink queue size to %d\n", (q-queues), q->info.queue_size);
+					} else {
+						printf("(FAILURE: Queue %ld) CAS failed in dequeue\n", (q-queues));
+					}
+				}
 			}
 		}
-tag2:
-		q->tail = 0;
+		WRITE_ONCE(q->tail, 0);
 	}
-	*value = q->data[t];
-	q->data[t] = ELEMENT_ZERO;
+	*value = READ_ONCE(q->data[t]);
+	WRITE_ONCE(q->data[t], ELEMENT_ZERO);
 
 	return SUCCESS;
 }
 
-#elif defined(CONS_BATCH)
-
-int dequeue(struct queue_t * q, ELEMENT_TYPE * value)
-{
-    uint32_t tmp_tail;
-    unsigned long bt_old, bt;
-
-    if( q->tail == q->batch_tail ) {
-
-        if ( !q->data[q->batch_tail] ) {
-            q->batch_history_c = q->batch_history_c >> 1;
-            return BUFFER_EMPTY;
-        }
-
-		// search batching size incrementally	
-        bt_old = bt = q->batch_history_c;
-        tmp_tail = q->batch_tail + bt;
-        if (tmp_tail >= q->queue_size)
-            tmp_tail -= q->queue_size;
-        // Incremental   
-        while ( q->data[tmp_tail] && (bt <= q->batch_size_c) ) {
-            bt_old = bt;
-            bt = bt << 1;
-            //bt = bt + 16;
-            tmp_tail = q->batch_tail + bt;
-            if (tmp_tail >= q->queue_size)
-                tmp_tail -= q->queue_size;
-        }
-
-        q->batch_history_c = bt_old;
-        tmp_tail = q->batch_tail + bt_old;
-        if (tmp_tail >= q->queue_size)
-            tmp_tail -= q->queue_size;
-        q->batch_tail = tmp_tail;
-    }
-
-    *value = q->data[q->tail];
-    q->data[q->tail] = ELEMENT_ZERO;
-    q->tail ++;
-    if ( q->tail >= q->queue_size )
-        q->tail = 0;
-
-    return SUCCESS;
-}
-
 #else
 
+int enqueue(struct queue_t * q, ELEMENT_TYPE value)
+{
+	if ( q->data[q->head] ) {
+		return BUFFER_FULL;
+	}
+
+	q->data[q->head] = value;
+	q->head ++;
+	if ( q->head >= q->queue_size ) {
+		q->head = 0;
+	}
+
+	return SUCCESS;
+}
+
 int dequeue(struct queue_t * q, ELEMENT_TYPE * value)
 {
-    if ( !q->data[q->tail] ) {
-        return BUFFER_EMPTY;
-    }
+	if ( !q->data[q->tail] ) {
+		return BUFFER_EMPTY;
+	}
 
-    *value = q->data[q->tail];
-    q->data[q->tail] = ELEMENT_ZERO;
-    q->tail ++; 
-    if ( q->tail >= q->queue_size )
-        q->tail = 0;
+	*value = q->data[q->tail];
+	q->data[q->tail] = ELEMENT_ZERO;
+	q->tail ++; 
+	if ( q->tail >= q->queue_size )
+		q->tail = 0;
 
-    return SUCCESS;
+	return SUCCESS;
 }
+
 #endif
+

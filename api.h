@@ -410,7 +410,6 @@ static __inline__ void waitall(void)
 	}
 }
 
-#if 0
 static __inline__ void run_on(int cpu)
 {
 	cpu_set_t mask;
@@ -419,7 +418,6 @@ static __inline__ void run_on(int cpu)
 	CPU_SET(cpu, &mask);
 	sched_setaffinity(0, sizeof(mask), &mask);
 }
-#endif // comment out to avoid to include pthread.h by Junchang
 
 /*
  * timekeeping -- very crude -- should use MONOTONIC...

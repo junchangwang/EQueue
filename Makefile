@@ -1,4 +1,3 @@
-
  #  tinyQueue
  #
  #  Copyright (C) 2017 Junchang Wang <junchangwang@gmail.com>
@@ -20,15 +19,14 @@
 
 INCLUDE = ../../include
 #CFLAGS = -Wall -Werror -g -O2 -D_M64_ -I$(INCLUDE)
-CFLAGS = -g -O2 -D_M64_ -I$(INCLUDE)
+CFLAGS = -g -O2 -D_M64_ -I$(INCLUDE) -D_GNU_SOURCE
 
-#CFLAGS += -DTINYQUEUE
+CFLAGS += -DTINYQUEUE
+CFLAGS += -DSIMULATE_BURST
+CFLAGS += -DBATCHING
 #CFLAGS += -DRT_SCHEDULE
-#CFLAGS += -DPROD_BATCH
-#CFLAGS += -DCONS_BATCH
 #CFLAGS += -DE2ELATENCY
 #CFLAGS += -DFIFO_DEBUG
-#CFLAGS += -DWORKLOAD_DEBUG
 #CFLAGS += -DINSERT_BUG
 
 ORG = fifo.o main.o 
@@ -41,7 +39,7 @@ $(ORG): fifo.h Makefile
 
 
 clean:
-	rm -f $(ORG) fifo test_cycle test_cycle.o cscope*
+	rm -f $(ORG) *.o *.a fifo test_cycle test_cycle.o cscope*
 
 cscope:
 	cscope -bqR

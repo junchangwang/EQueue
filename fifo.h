@@ -2,7 +2,6 @@
  *  tinyQueue: an efficient lock-free queue for pipeline parallelism 
  *  on multi-core architectures.
  *
- *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
@@ -21,8 +20,8 @@
 */
 
 
-#ifndef _FIFO_B_QUQUQ_H_
-#define _FIFO_B_QUQUQ_H_
+#ifndef _FIFO_TINYQUEUE_H_
+#define _FIFO_TINYQUEUE_H_
 
 #include <unistd.h>
 #include <stdio.h>
@@ -31,6 +30,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include "api.h"
 
 /* Reading/Writing aligned 64-bit memory is atomic on x64 servers. *
  * This argument must be changed to uint32_t when the FIFO is      *
@@ -42,42 +42,21 @@
 #define BUFFER_FULL -1
 #define BUFFER_EMPTY -2
 
-//#define DEFAULT_QUEUE_SIZE (1024 * 8) 
-#define MAX_QUEUE_SIZE (1024 * 1024)
-#define DEFAULT_QUEUE_SIZE (MAX_QUEUE_SIZE/512)
+#define MAX_CORE_NUM 16
 
-#define MAX_BATCH_SIZE (DEFAULT_QUEUE_SIZE/16)
-#define BATCH_INCREAMENT (DEFAULT_BATCH_SIZE/2)
+#define BATCH_SLICE (128UL)   //Must be power of two
+#define DEFAULT_QUEUE_SIZE (16 * BATCH_SLICE)
+#define DEFAULT_BATCH_SIZE (DEFAULT_QUEUE_SIZE/4)
+#define MAX_QUEUE_SIZE (1024 * BATCH_SLICE)  // 131K
+#define MIN_QUEUE_SIZE (2 * BATCH_SLICE)
+
+#define ENLARGE_THRESHOLD (1024)
+#define SHRINK_THRESHOLD (128)
+
 #define DEFAULT_PENALTY (1000) /* cycles */
 
-#if defined(CONS_BATCH) || defined(PROD_BATCH)
 
-struct queue_t {
-	/* Mostly accessed by producer. */
-	volatile	uint32_t	head;
-	volatile	uint32_t	batch_head;
-	uint32_t  full_counter;
-	unsigned long batch_history_p;
-
-	/* Mostly accessed by consumer. */
-	volatile	uint32_t	tail __attribute__ ((aligned(64)));
-	volatile	uint32_t	batch_tail;
-	uint32_t  empty_counter;
-	unsigned long batch_history_c;
-
-	/* readonly data */
-	uint64_t	start_c __attribute__ ((aligned(64)));
-	uint64_t	stop_c;
-	uint64_t  queue_size;
-	uint64_t  batch_size_p;
-	uint64_t  batch_size_c;
-	uint64_t  penalty;
-
-	/* accessed by both producer and comsumer */
-	ELEMENT_TYPE * data __attribute__ ((aligned(64)));
-} __attribute__ ((aligned(64)));
-
-#elif defined(TINYQUEUE)
+#if defined(TINYQUEUE)
 
 struct info_t {
 	uint32_t head       : 32;
@@ -86,25 +65,27 @@ struct info_t {
 
 struct queue_t {
 	/* Mostly accessed by producer. */
-	//volatile	uint32_t	head;
-	uint32_t  full_counter;
+	uint32_t  full_counter __attribute__ ((aligned(128)));
+	long traffic_full; 
+	struct info_t info; 
+#if defined(BATCHING)
+	uint32_t  local_head;
+#endif
 
 	/* Mostly accessed by consumer. */
-	volatile 	uint32_t	tail __attribute__ ((aligned(64)));
-	uint32_t  empty_counter;
+	uint32_t  empty_counter __attribute__ ((aligned(128)));
+	uint32_t	tail; 
+	long traffic_empty;
 
 	/* readonly data */
-	uint64_t	start_c __attribute__ ((aligned(64)));
+	uint64_t	start_c __attribute__ ((aligned(128)));
 	uint64_t	stop_c;
-	//uint64_t  queue_size;
 	uint64_t  penalty;
-	struct info_t info __attribute__ ((aligned(64)));
 
 	/* accessed by both producer and comsumer */
-	//ELEMENT_TYPE	data[QUEUE_SIZE] __attribute__ ((aligned(64)));
-	long traffic __attribute__ ((aligned(64)));
-	ELEMENT_TYPE * data __attribute__ ((aligned(64)));
-} __attribute__ ((aligned(64)));
+	ELEMENT_TYPE * data __attribute__ ((aligned(128)));
+
+};
 
 #else
 
@@ -130,7 +111,7 @@ struct queue_t {
 
 #endif
 
-void queue_init(struct queue_t *, uint64_t, uint64_t, uint64_t, uint64_t);
+void queue_init(struct queue_t *, uint64_t, uint64_t);
 int enqueue(struct queue_t *, ELEMENT_TYPE);
 int dequeue(struct queue_t *, ELEMENT_TYPE *);
 uint32_t distance(struct queue_t *);
@@ -145,3 +126,4 @@ static uint64_t rdtsc_barrier_end(void);
 void wait_ticks(uint64_t);
 
 #endif
+
