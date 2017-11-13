@@ -15,7 +15,7 @@ TinyQueue is released under GPL v3.
 
 # Compile and Run
 
-On most 64-bits machines running Linux, command "make" is enough to build sample code and tinyqueue executable file.
+On most 64-bits machines running Linux, command "make" is enough to build sample code and TinyQueue executable file.
 
 Usage:
 
