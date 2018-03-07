@@ -1,4 +1,4 @@
- #  tinyQueue
+ #  EQueue
  #
  #  Copyright (C) 2017 Junchang Wang <junchangwang@gmail.com>
  #
@@ -21,7 +21,7 @@ INCLUDE = ../../include
 #CFLAGS = -Wall -Werror -g -O2 -D_M64_ -I$(INCLUDE)
 CFLAGS = -g -O2 -D_M64_ -I$(INCLUDE) -D_GNU_SOURCE
 
-CFLAGS += -DTINYQUEUE
+CFLAGS += -DEQUEUE
 CFLAGS += -DSIMULATE_BURST
 CFLAGS += -DBATCHING
 #CFLAGS += -DRT_SCHEDULE

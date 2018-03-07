@@ -1,5 +1,5 @@
 /*
- *  tinyQueue: an efficient lock-free queue for pipeline parallelism 
+ *  EQueue: an efficient lock-free queue for pipeline parallelism 
  *  on multi-core architectures.
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -79,18 +79,18 @@ static ELEMENT_TYPE ELEMENT_ZERO = 0x0UL;
 void queue_init(struct queue_t *q, uint64_t queue_size, uint64_t penalty)
 {
 	memset(q, 0, sizeof(struct queue_t));
-#if defined(TINYQUEUE)
+#if defined(EQUEUE)
 	q->info.queue_size = queue_size;
 #else
 	q->queue_size = queue_size;
 #endif
-#if defined(TINYQUEUE)
+#if defined(EQUEUE)
 	q->traffic_full = 0;
 	q->traffic_empty = 0;
 #endif
 	q->penalty = penalty;
-#if defined(TINYQUEUE)
-	printf("===== TinyQueue starts ======\n");
+#if defined(EQUEUE)
+	printf("===== EQueue starts ======\n");
 	q->data = (ELEMENT_TYPE *) calloc (MAX_QUEUE_SIZE, sizeof(ELEMENT_TYPE));
 #else
 	q->data = (ELEMENT_TYPE *) calloc (q->queue_size, sizeof(ELEMENT_TYPE));
@@ -102,7 +102,7 @@ void queue_init(struct queue_t *q, uint64_t queue_size, uint64_t penalty)
 	}
 }
 
-#if defined(TINYQUEUE)
+#if defined(EQUEUE)
 
 uint32_t MOD(uint32_t val, uint32_t inc, uint32_t mod)
 {

@@ -1,5 +1,5 @@
 /*
- *  tinyQueue: an efficient lock-free queue for pipeline parallelism 
+ *  EQueue: an efficient lock-free queue for pipeline parallelism 
  *  on multi-core architectures.
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -20,8 +20,8 @@
 */
 
 
-#ifndef _FIFO_TINYQUEUE_H_
-#define _FIFO_TINYQUEUE_H_
+#ifndef _FIFO_EQUEUE_H_
+#define _FIFO_EQUEUE_H_
 
 #include <unistd.h>
 #include <stdio.h>
@@ -56,7 +56,7 @@
 #define DEFAULT_PENALTY (1000) /* cycles */
 
 
-#if defined(TINYQUEUE)
+#if defined(EQUEUE)
 
 struct info_t {
 	uint32_t head       : 32;

@@ -1,13 +1,13 @@
 
-# TinyQueue
+# EQueue
 
-This project contains source code of TinyQueue, an efficient lock-free queue for pipeline parallelism on multi-core architectures.
+This project contains source code of EQueue, an efficient lock-free queue for pipeline parallelism on multi-core architectures.
 
-TinyQueue is released under GPL v3.
+EQueue is released under GPL v3.
 
 # Organization
 
-* fifo.c: Source code of TinyQueue.
+* fifo.c: Source code of EQueue.
 * fifo.h: header file of fifo.c.
 * main.c: main file of the project.
 * CAS_range.c: Sample code to use the Less-Than Compare-And-Swap primitive.
@@ -15,7 +15,7 @@ TinyQueue is released under GPL v3.
 
 # Compile and Run
 
-On most 64-bits machines running Linux, command "make" is enough to build sample code and TinyQueue executable file.
+On most 64-bits machines running Linux, command "make" is enough to build sample code and EQueue executable file.
 
 Usage:
 
@@ -24,10 +24,10 @@ Usage:
 
 # Affinity setting files
 
-Upon start, TinyQueue first loads the specified affinity setting file, and then binds reader threads and updater threads to specified CPU cores, accordingly.
+Upon start, EQueue first loads the specified affinity setting file, and then binds reader threads and updater threads to specified CPU cores, accordingly.
 
 # Contact
 
-If you have any questions or suggestions regarding TinyQueue, please send email to junchangwang@gmail.com.
+If you have any questions or suggestions regarding EQueue, please send email to junchangwang@gmail.com.
 
 

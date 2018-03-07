@@ -1,5 +1,5 @@
 /*
- *  tinyQueue: an efficient lock-free queue for pipeline parallelism 
+ *  EQueue: an efficient lock-free queue for pipeline parallelism 
  *  on multi-core architectures.
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -61,7 +61,7 @@ static uint64_t e2e_sample_rate = 10000000UL;
 static uint64_t e2e_sample_set_size;
 static uint32_t e2e_sample_power_2;
 
-#if defined(TINYQUEUE)
+#if defined(EQUEUE)
 uint32_t distance(struct queue_t * q)
 {
 	uint32_t rst = (q->info.head >= q->tail)?
@@ -128,7 +128,7 @@ void * consumer(void *arg)
 		while( dequeue(&queues[cpu_id], &value) != 0 ) {
 			if (flag == 0) {
 				queues[cpu_id].empty_counter ++;
-#if defined(TINYQUEUE)
+#if defined(EQUEUE)
 				queues[cpu_id].traffic_empty ++;
 #endif
 				flag = 1;
@@ -206,7 +206,7 @@ void * producer(void *arg)
 		while ( enqueue(&queues[cpu_id], (ELEMENT_TYPE)i) != 0) {
 			if (flag == 0) {
 				queues[cpu_id].full_counter ++;
-#if defined(TINYQUEUE)
+#if defined(EQUEUE)
 				queues[cpu_id].traffic_full ++;
 #endif
 				flag = 1;
