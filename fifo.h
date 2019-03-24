@@ -1,6 +1,6 @@
 /*
- *  EQueue: an efficient lock-free queue for pipeline parallelism 
- *  on multi-core architectures.
+ *  EQueue: an robust and efficient lock-free queue for
+ *  pipeline parallelism on multi-core architectures.
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -15,10 +15,9 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Copyright (c) 2017 Junchang Wang, NUPT.
+ *  Copyright (c) 2019 Junchang Wang, NUPT.
  *
 */
-
 
 #ifndef _FIFO_EQUEUE_H_
 #define _FIFO_EQUEUE_H_
@@ -47,16 +46,13 @@
 #define BATCH_SLICE (128UL)   //Must be power of two
 #define DEFAULT_QUEUE_SIZE (16 * BATCH_SLICE)
 #define DEFAULT_BATCH_SIZE (DEFAULT_QUEUE_SIZE/4)
-#define MAX_QUEUE_SIZE (1024 * BATCH_SLICE)  // 131K
+#define MAX_QUEUE_SIZE (1024 * BATCH_SLICE)
 #define MIN_QUEUE_SIZE (2 * BATCH_SLICE)
 
 #define ENLARGE_THRESHOLD (1024)
 #define SHRINK_THRESHOLD (128)
 
 #define DEFAULT_PENALTY (1000) /* cycles */
-
-
-#if defined(EQUEUE)
 
 struct info_t {
 	uint32_t head       : 32;
@@ -66,15 +62,15 @@ struct info_t {
 struct queue_t {
 	/* Mostly accessed by producer. */
 	uint32_t  full_counter __attribute__ ((aligned(128)));
-	long traffic_full; 
-	struct info_t info; 
+	long traffic_full;
+	struct info_t info;
 #if defined(BATCHING)
 	uint32_t  local_head;
 #endif
 
 	/* Mostly accessed by consumer. */
 	uint32_t  empty_counter __attribute__ ((aligned(128)));
-	uint32_t	tail; 
+	uint32_t	tail;
 	long traffic_empty;
 
 	/* readonly data */
@@ -87,30 +83,6 @@ struct queue_t {
 
 };
 
-#else
-
-struct queue_t {
-	/* Mostly accessed by producer. */
-	volatile	uint32_t	head;
-	uint32_t  full_counter;
-
-	/* Mostly accessed by consumer. */
-	volatile 	uint32_t	tail __attribute__ ((aligned(64)));
-	uint32_t  empty_counter;
-
-	/* readonly data */
-	uint64_t	start_c __attribute__ ((aligned(64)));
-	uint64_t	stop_c;
-	uint64_t  queue_size;
-	uint64_t  penalty;
-
-	/* accessed by both producer and comsumer */
-	//ELEMENT_TYPE	data[QUEUE_SIZE] __attribute__ ((aligned(64)));
-	ELEMENT_TYPE * data __attribute__ ((aligned(64)));
-} __attribute__ ((aligned(64)));
-
-#endif
-
 void queue_init(struct queue_t *, uint64_t, uint64_t);
 int enqueue(struct queue_t *, ELEMENT_TYPE);
 int dequeue(struct queue_t *, ELEMENT_TYPE *);
@@ -119,10 +91,6 @@ uint32_t distance(struct queue_t *);
 uint64_t rdtsc_bare(void);
 uint64_t rdtscp(void);
 uint64_t rdtsc_barrier(void);
-#if 0
-static uint64_t rdtsc_barrier_begin(void);
-static uint64_t rdtsc_barrier_end(void);
-#endif
 void wait_ticks(uint64_t);
 
 #endif

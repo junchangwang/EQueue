@@ -33,7 +33,6 @@ ORG = fifo.o main.o
 
 fifo: $(ORG) $(LIB) 
 	gcc $(ORG) $(LIB) -o $@ -lpthread
-	cscope -bq
 
 $(ORG): fifo.h Makefile
 

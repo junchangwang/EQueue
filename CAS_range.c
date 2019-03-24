@@ -15,29 +15,13 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Copyright (c) 2017 Junchang Wang, NUPT.
+ *  Copyright (c) 2019 Junchang Wang, NUPT.
  *
 */
 
 #include <stdint.h>
 #include <stdio.h>
 
-/*
-// Char version sample code
-int main(void)
-{
-	char target = 'a';
-	uint8_t value;
-
-	value = target;
-	__sync_bool_compare_and_swap((char *) &target, value, 'b');
-
-	printf("%c, SUCCESS\n", target);
-	return 1;
-}
-*/
-
-// Integer version sample code
 int main(void)
 {
 	uint16_t target = 0x01FF;

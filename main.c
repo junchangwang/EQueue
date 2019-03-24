@@ -1,6 +1,6 @@
 /*
- *  EQueue: an efficient lock-free queue for pipeline parallelism 
- *  on multi-core architectures.
+ *  EQueue: an robust and efficient lock-free queue for
+ *  pipeline parallelism on multi-core architectures.
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Copyright (c) 2017 Junchang Wang, NUPT.
+ *  Copyright (c) 2019 Junchang Wang, NUPT.
  *
 */
 
@@ -61,7 +61,6 @@ static uint64_t e2e_sample_rate = 10000000UL;
 static uint64_t e2e_sample_set_size;
 static uint32_t e2e_sample_power_2;
 
-#if defined(EQUEUE)
 uint32_t distance(struct queue_t * q)
 {
 	uint32_t rst = (q->info.head >= q->tail)?
@@ -70,13 +69,6 @@ uint32_t distance(struct queue_t * q)
 		printf("distance: %d. head: %d, tail: %ld\n", rst, q->info.head, q->tail);
 	return rst;
 }
-#else
-uint32_t distance(struct queue_t * q)
-{
-	return (q->head >= q->tail)?
-		(q->head - q->tail) : (q->head + q->queue_size - q->tail);
-}
-#endif
 
 #endif
 
@@ -128,9 +120,7 @@ void * consumer(void *arg)
 		while( dequeue(&queues[cpu_id], &value) != 0 ) {
 			if (flag == 0) {
 				queues[cpu_id].empty_counter ++;
-#if defined(EQUEUE)
 				queues[cpu_id].traffic_empty ++;
-#endif
 				flag = 1;
 			}
 			//wait_ticks(queues[cpu_id].penalty);
@@ -206,9 +196,7 @@ void * producer(void *arg)
 		while ( enqueue(&queues[cpu_id], (ELEMENT_TYPE)i) != 0) {
 			if (flag == 0) {
 				queues[cpu_id].full_counter ++;
-#if defined(EQUEUE)
 				queues[cpu_id].traffic_full ++;
-#endif
 				flag = 1;
 			}
 			wait_ticks(queues[cpu_id].penalty);

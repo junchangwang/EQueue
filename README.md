@@ -1,7 +1,7 @@
 
 # EQueue
 
-This project contains source code of EQueue, an efficient lock-free queue for pipeline parallelism on multi-core architectures.
+This project contains the source code of EQueue, an efficient and robust lock-free queue for pipeline parallelism on multi-core architectures.
 
 EQueue is released under GPL v3.
 
@@ -11,11 +11,11 @@ EQueue is released under GPL v3.
 * fifo.h: header file of fifo.c.
 * main.c: main file of the project.
 * CAS_range.c: Sample code to use the Less-Than Compare-And-Swap primitive.
-* affinity.xxx.conf: Affinity configuration file which tries to allocate enqueue and dequeue threads to different CPU cores.
+* affinity.xxx.conf: Affinity configuration file which tries to map the enqueue and dequeue threads to different CPU cores.
 
 # Compile and Run
 
-On most 64-bits machines running Linux, command "make" is enough to build sample code and EQueue executable file.
+On most 64-bits machines running Linux, command "make" is enough to build the project.
 
 Usage:
 
@@ -24,7 +24,7 @@ Usage:
 
 # Affinity setting files
 
-Upon start, EQueue first loads the specified affinity setting file, and then binds reader threads and updater threads to specified CPU cores, accordingly.
+Upon start, EQueue first loads the specified affinity setting file, and then binds reader threads and writer threads to specified CPU cores, accordingly.
 
 # Contact
 
