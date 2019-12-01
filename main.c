@@ -1,6 +1,7 @@
 /*
- *  EQueue: an robust and efficient lock-free queue for
- *  pipeline parallelism on multi-core architectures.
+ *  EQueue: an robust and efficient lock-free queue
+ *  working as the communication scheme for parallelizing
+ *  applications on multi-core architectures.
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by

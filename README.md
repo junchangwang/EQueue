@@ -1,7 +1,7 @@
 
 # EQueue
 
-This project contains the source code of EQueue, an efficient and robust lock-free queue for pipeline parallelism on multi-core architectures.
+This project contains the source code of EQueue, an efficient and robust lock-free queue that works as a good candidate for the communication scheme for parallelizing applications  on multi-core architectures.
 
 EQueue is released under GPL v3.
 
@@ -24,7 +24,7 @@ Usage:
 
 # Affinity setting files
 
-Upon start, EQueue first loads the specified affinity setting file, and then binds reader threads and writer threads to specified CPU cores, accordingly.
+Upon start, EQueue first loads the specified affinity setting file, and then binds reader threads and writer threads to specified CPU cores, accordingly. The configuration files *affinity.distr.conf* and *affinity.tree.conf* are for Dell R730 server with two Intel Xeon processors (8*2 cores). If you are working with other hardware configuration, you may need to first adjust the settings in these two files.
 
 # Contact
 
