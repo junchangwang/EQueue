@@ -56,13 +56,13 @@
 #define DEFAULT_PENALTY (1000) /* cycles */
 
 struct info_t {
-	uint32_t head       : 32;
-	uint64_t queue_size : 32;
+	uint32_t head;
+	uint32_t queue_size;
 };
 
 struct queue_t {
 	/* Mostly accessed by producer. */
-	uint32_t  full_counter __attribute__ ((aligned(128)));
+	uint32_t full_counter __attribute__ ((aligned(128)));
 	long traffic_full;
 	struct info_t info;
 #if defined(BATCHING)
@@ -70,14 +70,14 @@ struct queue_t {
 #endif
 
 	/* Mostly accessed by consumer. */
-	uint32_t  empty_counter __attribute__ ((aligned(128)));
-	uint32_t	tail;
+	uint32_t empty_counter __attribute__ ((aligned(128)));
+	uint32_t tail;
 	long traffic_empty;
 
 	/* readonly data */
-	uint64_t	start_c __attribute__ ((aligned(128)));
-	uint64_t	stop_c;
-	uint64_t  penalty;
+	uint64_t start_c __attribute__ ((aligned(128)));
+	uint64_t stop_c;
+	uint64_t penalty;
 
 	/* accessed by both producer and comsumer */
 	ELEMENT_TYPE * data __attribute__ ((aligned(128)));

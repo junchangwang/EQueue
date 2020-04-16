@@ -64,10 +64,14 @@ static uint32_t e2e_sample_power_2;
 
 uint32_t distance(struct queue_t * q)
 {
-	uint32_t rst = (q->info.head >= q->tail)?
-           (q->info.head - q->tail) : (q->info.head + q->info.queue_size - q->tail);
+	uint32_t head = READ_ONCE(q->info.head);
+	uint32_t tail = READ_ONCE(q->tail);
+	uint32_t qsize = READ_ONCE(q->info.queue_size);
+
+	uint32_t rst = head >= tail? (head - tail) : (head + qsize - tail);
 	if (rst != 0)
-		printf("distance: %d. head: %d, tail: %ld\n", rst, q->info.head, q->tail);
+		printf("distance: %d. head: %d, tail: %ld\n",
+				rst, q->info.head, q->tail);
 	return rst;
 }
 
@@ -124,7 +128,6 @@ void * consumer(void *arg)
 				queues[cpu_id].traffic_empty ++;
 				flag = 1;
 			}
-			//wait_ticks(queues[cpu_id].penalty);
 		}
 
 #if defined(E2ELATENCY)
@@ -132,7 +135,8 @@ void * consumer(void *arg)
 			if ((i & (e2e_sample_rate - 1)) == 0) {
 				uint32_t pos = (i >> e2e_sample_power_2) - 1;
 				e2e_output_c[ pos ].tsc = rdtsc_bare();
-				//printf("iteration %ld, output_c[%u], tsc: %ld\n", i, pos, e2e_output_c[pos].tsc);
+				//printf("iteration %ld, output_c[%u], tsc: %ld\n",
+				//		i, pos, e2e_output_c[pos].tsc);
 			}
 		}
 #endif
@@ -143,7 +147,9 @@ void * consumer(void *arg)
 
 #if defined(FIFO_DEBUG)
 		if((old_value + 1) != value) {
-			printf("!!!ERROR!!! in queue internal (old_value: %lu, value: %lu)\n", old_value, value);
+			printf("!!!ERROR!!! in queue internal \
+					(old_value: %lu, value: %lu)\n",
+					old_value, value);
 		}
 
 		old_value = value;
@@ -151,9 +157,12 @@ void * consumer(void *arg)
 	}
 	queues[cpu_id].stop_c = rdtsc_bare();
 
-	//pthread_barrier_wait(barrier);
-
-	printf("[Queue: %d: Buffer full: %u (ratio: %f). Buffer empty: %u (ration: %f)\n", cpu_id, queues[cpu_id].full_counter, (double)(queues[cpu_id].full_counter)/test_size, queues[cpu_id].empty_counter, (double)(queues[cpu_id].empty_counter)/test_size);
+	printf("[Queue: %d: Buffer full: %u (ratio: %f).\
+			Buffer empty: %u (ration: %f)\n", 
+			cpu_id, queues[cpu_id].full_counter, 
+			(double)(queues[cpu_id].full_counter)/test_size, 
+			queues[cpu_id].empty_counter, 
+			(double)(queues[cpu_id].empty_counter)/test_size);
 
 	pthread_exit("consumer exit!");
 }
@@ -215,7 +224,9 @@ void * producer(void *arg)
 			uint32_t pos = (i >> e2e_sample_power_2) - 1;
 			e2e_output_p[ pos ].distance = distance(&queues[1]);
 			e2e_output_p[ pos ].tsc = rdtsc_bare();
-			//printf("iteration %ld, output_p[%u], tsc: %lu, distance: %u\n",i, pos, e2e_output_p[pos].tsc, e2e_output_p[pos].distance);
+			//printf("iteration %ld, output_p[%u], tsc: %lu, distance: %u\n",
+			//		i, pos, e2e_output_p[pos].tsc, 
+			//		e2e_output_p[pos].distance);
 		}
 #endif
 #if defined(SIMULATE_BURST)

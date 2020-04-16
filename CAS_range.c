@@ -32,23 +32,23 @@ int main(void)
 	printf("%X, (should be 0x01FE)\n", target);
 
 	if (__sync_bool_compare_and_swap(((char *)&target)+1, value, 2)) {
-		printf("First CAS success!\n");
+		printf("First CAS succeed!\n");
 	} else {
 		printf("ERROR: First CAS failed!\n");
 	}
-
 	printf("%X, (should be 0x02FE)\n", target);
+
 	target += 3;
 	printf("%X, (should be 0x0301)\n", target);
 
-	if ( ! __sync_bool_compare_and_swap(((char *)&target)+1, 2, 2)) {
-		printf("Second CAS success!\n");
+	if ( ! __sync_bool_compare_and_swap(((char *)&target)+1, 0x02, 2)) {
+		printf("Second CAS succeed!\n");
 	} else {
 		printf("ERROR: Second CAS failed!\n");
 	}
 
-	if ( __sync_bool_compare_and_swap(((char *)&target)+1, 3, 4)) {
-		printf("Third CAS success!\n");
+	if ( __sync_bool_compare_and_swap(((char *)&target)+1, 0x03, 0x0404)) {
+		printf("Third CAS succeed!\n");
 	} else {
 		printf("ERROR: Third CAS failed!\n");
 	}
